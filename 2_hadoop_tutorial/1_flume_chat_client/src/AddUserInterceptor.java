@@ -1,8 +1,3 @@
-package ch.cern.db.flume.interceptors;
-
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -11,27 +6,25 @@ import org.apache.flume.Event;
 import org.apache.flume.event.EventBuilder;
 import org.apache.flume.interceptor.Interceptor;
 
-public class AddTimestampInterceptor implements Interceptor {
-	
-	public static String DATE_FORMAT = "dd/MM/yyyy HH:mm:ss";
-	
-	private DateFormat format;
-	
-	public AddTimestampInterceptor() {
-	}
+public class AddUserInterceptor implements Interceptor {
 
+	private String username;
+
+	public AddUserInterceptor() {
+	}
+	
 	@Override
 	public void initialize() {
-		format = new SimpleDateFormat(DATE_FORMAT);
+		username = System.getProperty("user.name");
 	}
 
 	@Override
 	public Event intercept(Event event) {
 		String body = new String(event.getBody());
 		
-		String body_with_timestamp = "[" + format.format(new Date()) + "] " + body;
+		String body_with_username = "(" + username + "): " + body;
 		
-		return EventBuilder.withBody(body_with_timestamp.getBytes(), event.getHeaders());
+		return EventBuilder.withBody(body_with_username.getBytes(), event.getHeaders());
 	}
 
 	@Override
@@ -51,7 +44,7 @@ public class AddTimestampInterceptor implements Interceptor {
 	@Override
 	public void close() {
 	}
-
+	
 	/**
 	 * Builder which builds new instance of this class
 	 */
@@ -63,9 +56,9 @@ public class AddTimestampInterceptor implements Interceptor {
 
 		@Override
 		public Interceptor build() {
-			return new AddTimestampInterceptor();
+			return new AddUserInterceptor();
 		}
 
 	}
-	
+
 }
