@@ -1,3 +1,5 @@
+mkdir -p /tmp/flume-chat-data/
+
 flume-ng agent \
 	--classpath classes/ \
 	--conf conf \
