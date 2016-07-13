@@ -1,5 +1,0 @@
-flume-ng agent \
-	--classpath classes/ \
-	--conf conf \
-	--name htutorial-agent \
-	--conf-file conf/agent.conf
