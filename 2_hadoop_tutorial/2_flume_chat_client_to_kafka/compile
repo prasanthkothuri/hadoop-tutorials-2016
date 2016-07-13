@@ -1,0 +1,12 @@
+mkdir -p classes
+
+javac -cp '/opt/cloudera/parcels/CDH/lib/flume-ng/lib/*' \
+	-d classes \
+	-source 1.7 -target 1.7 \
+	-nowarn \
+	src/*.java
+
+if [ "$?" == "0" ]
+then
+	echo Built successfully!
+fi
