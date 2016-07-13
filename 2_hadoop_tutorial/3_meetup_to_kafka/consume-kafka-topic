@@ -1,0 +1,1 @@
+kafka-console-consumer --zookeeper haperf104:2181,haperf105:2181 --topic meetup-data-username

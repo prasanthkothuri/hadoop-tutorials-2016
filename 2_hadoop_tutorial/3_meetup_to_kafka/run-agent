@@ -1,0 +1,12 @@
+# Remove newer version of kafka libs from classpath was required
+# root access required
+# mv /opt/cloudera/parcels/CDH/lib/flume-ng/lib/kafka_2.10-0.9.0-kafka-2.0.0.jar \
+#	/opt/cloudera/parcels/CDH/lib/flume-ng/lib/kafka_2.10-0.9.0-kafka-2.0.0.jar.out	
+# mv /opt/cloudera/parcels/CDH/lib/flume-ng/lib/kafka-clients-0.9.0-kafka-2.0.0.jar \
+#	/opt/cloudera/parcels/CDH/lib/flume-ng/lib/kafka-clients-0.9.0-kafka-2.0.0.jar.out
+
+flume-ng agent \
+	--classpath "classes/:/opt/cloudera/parcels/KAFKA/lib/kafka/libs/*" \
+	--conf conf \
+	--name htutorial-agent \
+	--conf-file conf/agent.conf
