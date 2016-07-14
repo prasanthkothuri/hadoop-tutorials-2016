@@ -1,0 +1,415 @@
+## NOTE
+# Several replacements of your username need to be done
+# It can be done by executing this file with "sh this_file"
+
+## PERFORM REPLACEMENT ##
+SOURCE="${BASH_SOURCE[0]}"
+sed -e "s/<username>/`whoami`/g" $SOURCE | tail -n +13
+exit
+## PERFORM REPLACEMENT ##
+
+# Otherwise, please as you see <username>, replace it with your username
+
+##### Hadoop tutorial commands ######
+
+### Step 0 ### Produce the data (it does not need to be executed, it is already done)
+
+  ## Load JSON data from API
+
+  # 1st option: Store it locally and then move it to HDFS
+  curl -s http://stream.meetup.com/2/rsvps -o meetup_data.json
+    (Ctrl + C)
+  hdfs dfs -moveFromLocal meetup_data.json meetup.json
+
+  # 2st option: Directly
+  curl -s http://stream.meetup.com/2/rsvps | head -10 | hdfs dfs -put - meetup.json
+
+  # Show loaded data
+  hdfs dfs -cat meetup.json
+
+  ## Convert it to Parquet with Spark
+
+  spark-shell
+    scala> val meetup_data = sqlContext.read.json("meetup-data/*.json")
+    scala> val sel = meetup_data.select("*").withColumnRenamed("group","group_info")
+    scala> sel.saveAsParquetFile("meetup-data-parquet")
+
+  ## Convert it to CSV with Impala
+
+  impala-shell
+    > CREATE EXTERNAL TABLE meetup_parquet
+        LIKE PARQUETFILE '/user/<username>/meetup-data-parquet/<any_parquet_file>.gz.parquet'   
+        STORED AS parquet   
+        LOCATION '/user/<username>/meetup-data-parquet/';
+
+    > CREATE TABLE meetup_csv
+        row format delimited fields terminated by ',' ESCAPED BY '"' LINES TERMINATED BY '\n'  
+        AS SELECT    
+          event.event_id event_id,
+          event.event_name event_name,
+          event.time time,
+          event.event_url event_url,
+          group_info.group_id group_id,
+          group_info.group_name group_name,
+          group_info.group_city group_city,
+          group_info.group_country group_country,
+          group_info.group_lat group_lat,
+          group_info.group_lon group_lon, 
+          group_info.group_state group_state,
+          group_info.group_urlname group_urlname,
+          guests,
+          member.member_id member_id,
+          member.member_name member_name,
+          member.photo photo,
+          mtime,
+          response,
+          rsvp_id,
+          venue.venue_id venue_id,
+          venue.venue_name venue_name,
+          venue.lat venue_lat,
+          venue.lon venue_lon 
+          FROM meetup_parquet;  
+
+  ## Merge CSV files 
+  hadoop fs -getmerge /user/<username>/meetup-data-parquet/ /tmp/meetup.csv
+
+  ## Copy it to AFS
+  cp /tmp/meetup.csv /afs/cern.ch/project/db/htutorials/meetup.csv
+
+#####################################################
+################## START FROM HERE ################## 
+#####################################################
+
+### Step 1 ### Process the data 
+
+  ## Create our own database (this directory will be created in your home directory, so it yours!)
+  
+  hdfs dfs -mkdir database
+
+  # Impala user will also need read/write privilegies
+  hdfs dfs -chmod 777 database
+
+  impala-shell
+    > CREATE DATABASE <username>_db LOCATION '/user/<username>/database';
+    > USE <username>_db;
+    > exit;
+
+  ## Copy CSV data for our first table
+
+  hdfs dfs -mkdir database/meetup_csv
+  hdfs dfs -put /afs/cern.ch/project/db/htutorials/meetup.csv database/meetup_csv/
+
+  ## Create table with data
+
+  impala-shell --database=`whoami`_db
+    > CREATE EXTERNAL TABLE meetup_csv
+          (event_id string,
+          event_name string,
+          time bigint,
+          event_url string,
+          group_id bigint,
+          group_name string,
+          group_city string,
+          group_country string,
+          group_lat double,
+          group_lon double, 
+          group_state string,
+          group_urlname string,
+          guests bigint,
+          member_id bigint,
+          member_name string,
+          photo string,
+          mtime bigint,
+          response string,
+          rsvp_id bigint,
+          venue_id bigint,
+          venue_name string,
+          venue_lat double,
+          venue_lon double)
+        ROW FORMAT delimited fields terminated by ',' ESCAPED BY '"' LINES TERMINATED BY '\n'
+        LOCATION '/user/<username>/database/meetup_csv/';
+
+  ## Query it!
+
+  impala-shell --database=`whoami`_db (if you exited)
+    # SQL hello world!
+    > SELECT count(*) FROM meetup_csv;
+
+    # Most interesting meetups
+    > SELECT DISTINCT event_name, group_name, venue_name  
+        FROM meetup_csv
+        WHERE event_id IN 
+          (SELECT event_id FROM meetup_csv
+          GROUP BY event_id ORDER BY count(*) desc LIMIT 10);
+
+    # Not interesting ones
+    > SELECT event_name, response, count(*) 
+        FROM meetup_csv
+        WHERE response='no' 
+        GROUP BY event_name, response 
+        ORDER BY 3 desc;
+
+    # Time range
+    > SELECT event_name, 
+              event_url, 
+              member_name, 
+              venue_name, 
+              venue_lat, 
+              venue_lon,
+              concat(event_name, ', ', from_unixtime(floor(time/1000),"yyyy-MM-dd HH:mm:ss")) label
+        FROM meetup_csv
+        WHERE time BETWEEN unix_timestamp("2016-07-06 10:30:00")*1000
+                       AND unix_timestamp("2016-07-06 10:40:00")*1000;
+
+    # Distribution of events along the week
+    > SELECT hour(from_unixtime(cast(time/1000 as bigint))), count(*) 
+        FROM meetup_csv 
+        WHERE time IS NOT NULL
+        GROUP BY 1
+        ORDER BY 1;
+
+### Step 3 ### Can we do it better? (Avro)
+
+  ## Create Avro table 
+
+  impala-shell --database=`whoami`_db (if you exited)
+    > CREATE TABLE meetup_avro
+        LIKE meetup_csv
+        STORED AS avro;
+
+  ## Populate tables
+    > set ALLOW_UNSUPPORTED_FORMATS=true;
+    > INSERT INTO meetup_avro
+        SELECT * FROM meetup_csv;
+
+  ## Run queries
+    # SQL hello world!
+    > SELECT count(*) FROM meetup_avro;
+
+    # Most interesting meetups
+    > SELECT DISTINCT event_name, group_name, venue_name  
+        FROM meetup_avro
+        WHERE event_id IN 
+          (SELECT event_id FROM meetup_avro
+          GROUP BY event_id ORDER BY count(*) desc LIMIT 10);
+
+    # Not interesting ones
+    > SELECT event_name, response, count(*) 
+        FROM meetup_avro
+        WHERE response='no' 
+        GROUP BY event_name, response 
+        ORDER BY 3 desc;
+
+    # Time range
+    > SELECT event_name, event_url, member_name, venue_name, venue_lat, venue_lon
+        FROM meetup_avro
+        WHERE time BETWEEN unix_timestamp("2016-07-06 10:30:00")*1000
+                       AND unix_timestamp("2016-07-06 12:00:00")*1000;
+
+### Step 4 ### Can we do it better? (partitioning)
+
+  ## Create partitioning table
+
+  impala-shell --database=`whoami`_db (if you exited)
+    > CREATE TABLE meetup_avro_part
+        (event_id string, event_name string,    
+        time bigint, event_url string,    
+        group_id bigint, group_name string,    
+        group_city string, group_country string,
+        group_lat double, group_lon double,
+        group_state string, group_urlname string, 
+        guests bigint, member_id bigint,
+        member_name string, photo string, 
+        mtime bigint, response string, 
+        rsvp_id bigint, venue_id bigint,
+        venue_name string, venue_lat double,    
+        venue_lon double)  
+        PARTITIONED BY (year INT, month INT, day INT)
+        STORED AS avro;
+
+  ## Populate table
+
+    > set ALLOW_UNSUPPORTED_FORMATS=true; (if you exited)
+    > INSERT INTO meetup_avro_part
+        PARTITION (year, month, day)    
+        SELECT *,      
+            year(from_unixtime(cast(time/1000 as bigint))),
+            month(from_unixtime(cast(time/1000 as bigint))),
+            day(from_unixtime(cast(time/1000 as bigint)))     
+          FROM meetup_avro;
+
+  ## Run queries
+
+    # Most interesting meetups
+    > SELECT DISTINCT event_name, group_name, venue_name  
+        FROM meetup_avro_part
+        WHERE event_id IN 
+          (SELECT event_id FROM meetup_avro_part
+          GROUP BY event_id ORDER BY count(*) desc LIMIT 10)
+          and year = 2016 and month = 7;
+
+    # Not interesting ones
+    > SELECT event_name, response, count(*) 
+        FROM meetup_avro_part
+        WHERE response='no' and year = 2016 and month = 7
+        GROUP BY event_name, response 
+        ORDER BY 3 desc;
+
+    # Time range
+    > SELECT event_name, event_url, member_name, venue_name, venue_lat, venue_lon
+        FROM meetup_avro_part
+        WHERE year = 2016 and month = 7 and day = 6 and
+              time BETWEEN unix_timestamp("2016-07-06 10:30:00")*1000
+                       AND unix_timestamp("2016-07-06 12:00:00")*1000;
+
+### Step 5 ### Can we do it better? (horizontal and vertical partitioning, Parquet)
+
+  ## Create partitioning Parquet table
+    impala-shell --database=`whoami`_db (if you exited)
+    > CREATE TABLE meetup_parquet_part
+        (event_id string, event_name string,    
+        time bigint, event_url string,    
+        group_id bigint, group_name string,    
+        group_city string, group_country string,
+        group_lat double, group_lon double,
+        group_state string, group_urlname string, 
+        guests bigint, member_id bigint,
+        member_name string, photo string, 
+        mtime bigint, response string, 
+        rsvp_id bigint, venue_id bigint,
+        venue_name string, venue_lat double,    
+        venue_lon double)  
+        PARTITIONED BY (year INT, month INT, day INT)  
+        STORED AS parquet;
+
+    > INSERT INTO meetup_parquet_part
+        PARTITION (year, month, day)    
+        SELECT *,      
+          year(from_unixtime(cast(time/1000 as bigint))),
+          month(from_unixtime(cast(time/1000 as bigint))),
+          day(from_unixtime(cast(time/1000 as bigint)))     
+          FROM meetup_avro;
+
+  ## Run queries
+
+    # Most interesting meetups
+    > SELECT DISTINCT event_name, group_name, venue_name  
+        FROM meetup_parquet_part
+        WHERE event_id IN 
+          (SELECT event_id FROM meetup_parquet_part
+          GROUP BY event_id ORDER BY count(*) desc LIMIT 10)
+          and year = 2016 and month = 7;
+
+    # Not interesting ones
+    > SELECT event_name, response, count(*) 
+        FROM meetup_parquet_part
+        WHERE response='no' and year = 2016 and month = 7
+        GROUP BY event_name, response 
+        ORDER BY 3 desc;
+
+    # Time range
+    > SELECT event_name, event_url, member_name, venue_name, venue_lat, venue_lon
+        FROM meetup_parquet_part
+        WHERE year = 2016 and month = 7 and day = 6 and
+              time BETWEEN unix_timestamp("2016-07-06 10:30:00")*1000
+                       AND unix_timestamp("2016-07-06 12:00:00")*1000;
+
+### Step 6 ### Can we do it better? (HBase)
+
+  ## Create HBase table
+    hbase shell
+      > create 'meetup_<username>', 'event', 'group', 'member', 'venue'  
+      > exit
+
+  ## Map it to table
+    hive --database=`whoami`_db 
+      > CREATE EXTERNAL TABLE meetup_hbase (
+            key string,
+            event_id string,
+            event_name string,
+            time bigint,
+            event_url string,
+            group_id bigint,
+            group_name string,
+            group_city string,
+            group_country string,
+            group_lat double,
+            group_lon double, 
+            group_state string,
+            group_urlname string,
+            guests bigint,
+            member_id bigint,
+            member_name string,
+            photo string,
+            mtime bigint,
+            response string,
+            rsvp_id bigint,
+            venue_id bigint,
+            venue_name string,
+            venue_lat double,
+            venue_lon double) 
+        STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
+        WITH SERDEPROPERTIES (
+          "hbase.columns.mapping" =
+          ":key,
+            event:event_id,
+            event:event_name,
+            event:time,
+            event:event_url,
+            group:group_id,
+            group:group_name,
+            group:group_city,
+            group:group_country,
+            group:group_lat,
+            group:group_lon, 
+            group:group_state,
+            group:group_urlname,
+            event:guests,
+            member:member_id,
+            member:member_name,
+            event:photo,
+            event:mtime,
+            event:response,
+            event:rsvp_id,
+            venue:venue_id,
+            venue:venue_name,
+            venue:venue_lat,
+            venue:venue_lon"
+        )
+        TBLPROPERTIES("hbase.table.name" = "meetup_<username>");
+        
+      > exit
+
+  # Populate table
+    hive --database=`whoami`_db
+      
+      > INSERT INTO meetup_hbase
+          SELECT concat(
+                    cast(nvl(time, 0) as string), 
+                    event_id, 
+                    cast(mtime as string)), 
+                  * 
+            FROM meetup_csv;
+
+      > exit;
+
+  ## Run queries
+    impala-shell --database=`whoami`_db
+
+      # Table was created in Hive, you may need to invalidate metadata
+      > INVALIDATE metadata;
+
+      # Time range using key
+      > SELECT * 
+          FROM meetup_hbase
+          WHERE key BETWEEN "1467801000" AND "1467806400";
+
+      > SELECT * 
+          FROM meetup_hbase
+          WHERE key BETWEEN cast(unix_timestamp("2016-07-06 10:30:00") as string) 
+                        AND cast(unix_timestamp("2016-07-06 12:00:00") as string);
+
+      > exit;
+
+
+
