@@ -17,4 +17,6 @@ Find the recording of the session at: https://cds.cern.ch/record/2197972
 
 A hands-on video has been also recorded where we go through all the commands explained during the presentation: https://youtu.be/nUETADQwhJw
 
-  
+## Troubleshooting
+
+A fix of LC\_CTYPE warning appearing when using Mac terminal with the default settings can be found at: http://www.cyberciti.biz/faq/os-x-terminal-bash-warning-setlocale-lc_ctype-cannot-change-locale
