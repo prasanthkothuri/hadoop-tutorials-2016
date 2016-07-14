@@ -1,3 +1,15 @@
+# Select a port for the chat which is not being used
+chat_port=1234
+while [ ! -z "`netstat -a --numeric-ports | grep $chat_port`" ]; 
+do 
+	chat_port=$((chat_port+1)); 
+done
+sed -i -e "s/chat-client.sources.netcat_source.port = .*/chat-client.sources.netcat_source.port = $chat_port/g" conf/agent.conf
+
+# Produce script to init chat
+echo telnet `hostname` $chat_port > init_chat
+chmod +x init_chat
+
 flume-ng agent \
 	--classpath classes/ \
 	--conf conf \

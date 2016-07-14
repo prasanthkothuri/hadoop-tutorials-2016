@@ -5,6 +5,18 @@
 # mv /opt/cloudera/parcels/CDH/lib/flume-ng/lib/kafka-clients-0.9.0-kafka-2.0.0.jar \
 #	/opt/cloudera/parcels/CDH/lib/flume-ng/lib/kafka-clients-0.9.0-kafka-2.0.0.jar.out
 
+# Select a port for the chat which is not being used
+chat_port=1234
+while [ ! -z "`netstat -a --numeric-ports | grep $chat_port`" ]; 
+do 
+	chat_port=$((chat_port+1)); 
+done
+sed -i -e "s/chat-client.sources.netcat_source.port = .*/chat-client.sources.netcat_source.port = $chat_port/g" conf/agent.conf
+
+# Produce script to init chat
+echo telnet `hostname` $chat_port > init_chat
+chmod +x init_chat
+
 flume-ng agent \
 	--classpath "classes/:/opt/cloudera/parcels/KAFKA/lib/kafka/libs/*" \
 	--conf conf \
