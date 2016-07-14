@@ -5,6 +5,8 @@
 # mv /opt/cloudera/parcels/CDH/lib/flume-ng/lib/kafka-clients-0.9.0-kafka-2.0.0.jar \
 #	/opt/cloudera/parcels/CDH/lib/flume-ng/lib/kafka-clients-0.9.0-kafka-2.0.0.jar.out
 
+sed -e "s/<username>/`whoami`/g" conf/agent.conf
+
 flume-ng agent \
 	--classpath "classes/:/opt/cloudera/parcels/KAFKA/lib/kafka/libs/*" \
 	--conf conf \
