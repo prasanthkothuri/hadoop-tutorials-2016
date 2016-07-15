@@ -1,0 +1,3 @@
+hbase shell <<EOF
+create 'meetup_flume_`whoami`','event'
+EOF
