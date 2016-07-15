@@ -1,0 +1,5 @@
+user=`whoami`
+
+PID=`ps axu | grep kafka | grep ^$user | grep server | awk '{ print $2}'`
+
+kill $PID 2>/dev/null
