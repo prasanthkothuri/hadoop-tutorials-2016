@@ -23,3 +23,5 @@ sqoop job --exec meetup_$(whoami) -- --where " mtime between ${START}000 and ${S
 if [ $? -eq 0 ]; then
     echo $STOP_T>$CKPT_FILE
 fi
+
+hdfs dfs -ls -h -R /user/$(whoami)/meetup_data_sqoop/

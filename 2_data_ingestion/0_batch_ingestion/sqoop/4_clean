@@ -12,5 +12,5 @@ hdfs dfs -rm -r -skipTrash /user/$(whoami)/meetup_data_sqoop
 
 rm *.java
 rm checkpoint.meetup
-
+rm -rf codegen_meetup
 
