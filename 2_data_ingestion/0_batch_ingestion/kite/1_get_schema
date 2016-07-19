@@ -9,7 +9,7 @@
 LINES=`wc -l $0|cut -d ' ' -f 1`
 SKIP=`grep -n '###START HERE###' $0|tail -1|cut -d ':' -f 1`
 LINES=$(($LINES-$SKIP))
-echo -e "\n\033[0;32m1# INFERING SCHEMA FROM CSV DATA:\033[0m \n>>>\033[1;33m"
+echo -e "\n\033[0;32m1# INFERING SCHEMA FROM CSV DATA:\033[0m \n>>>\033[1;34m"
 tail -$LINES $0
 echo -e "\033[0m<<<\n\n"
 
