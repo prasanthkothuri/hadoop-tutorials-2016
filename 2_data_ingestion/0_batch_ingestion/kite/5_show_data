@@ -6,6 +6,6 @@ tail -$LINES $0
 echo -e "\033[0m<<<\n\n"
 
 ###START HERE###
-hdfs dfs -ls /user/`whoami`/datasets/ratings/year=1970/month=01
-hdfs dfs -ls /user/`whoami`/datasets/ratings/year=1970/month=01/day=10
+hdfs dfs -ls /user/`whoami`/datasets/ratings/
+hdfs dfs -ls -R /user/`whoami`/datasets/ratings/
 kite-dataset show dataset:hdfs:/user/`whoami`/datasets/ratings

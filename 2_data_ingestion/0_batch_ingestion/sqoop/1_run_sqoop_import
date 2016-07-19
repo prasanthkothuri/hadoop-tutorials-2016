@@ -1,7 +1,7 @@
 LINES=`wc -l $0|cut -d ' ' -f 1`
 SKIP=`grep -n '###START HERE###' $0|tail -1|cut -d ':' -f 1`
 LINES=$(($LINES-$SKIP))
-echo -e "\n\033[0;32m1# CREATING A JOB:\033[0m \n>>>\033[1;33m"
+echo -e "\n\033[0;32m RUNNING SQOOP IMPORT:\033[0m \n>>>\033[1;33m"
 tail -$LINES $0
 echo -e "\033[0m<<<\n\n"
 
@@ -13,9 +13,9 @@ sqoop import \
 --connect jdbc:oracle:thin:@itrac5110:10121/PIMT_RAC51.cern.ch \
 --username meetup \
 -P \
+--table meetup.meetup_data \
 --num-mappers 2 \
 --target-dir /user/$(whoami)/meetup_data_sqoop \
---table meetup.meetup_data \
 
 hdfs dfs -ls  /user/$(whoami)/meetup_data_sqoop
 

@@ -7,7 +7,5 @@ echo -e "\033[0m<<<\n\n"
 
 ###START HERE###
 echo "[
-  {\"type\": \"year\", \"source\": \"timestamp\"},
-  {\"type\": \"month\", \"source\": \"timestamp\"},
-  {\"type\": \"day\", \"source\": \"timestamp\"}
+  {\"type\": \"year\", \"source\": \"timestamp\"}
 ]"> partition.policy.json

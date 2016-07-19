@@ -6,5 +6,8 @@ tail -$LINES $0
 echo -e "\033[0m<<<\n\n"
 
 ###START HERE###
-curl http://files.grouplens.org/datasets/movielens/ml-latest-small.zip -o movies.zip 
-unzip movies.zip
+
+#source: http://files.grouplens.org/datasets/movielens/ml-latest-small.zip
+
+hdfs dfs -get /tmp/ratings.csv .
+head -10 ratings.csv

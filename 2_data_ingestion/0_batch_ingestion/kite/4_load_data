@@ -6,4 +6,4 @@ tail -$LINES $0
 echo -e "\033[0m<<<\n\n"
 
 ###START HERE###
-kite-dataset csv-import ml-latest-small/ratings.csv --delimiter ',' dataset:hdfs:/user/`whoami`/datasets/ratings
+kite-dataset csv-import ratings.csv --delimiter ',' dataset:hdfs:/user/`whoami`/datasets/ratings 2>/dev/null

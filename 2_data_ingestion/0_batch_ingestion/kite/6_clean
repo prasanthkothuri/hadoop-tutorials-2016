@@ -7,8 +7,7 @@ echo -e "\033[0m<<<\n\n"
 
 ###START HERE###
 hdfs dfs -rm -r -skipTrash /user/`whoami`/datasets/ratings
-rm -rf ml-latest-small
-rm movies.zip
 rm partition.policy.json
 rm ratings.avsc
+rm ratings.csv
 

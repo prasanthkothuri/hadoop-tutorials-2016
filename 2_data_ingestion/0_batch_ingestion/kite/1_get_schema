@@ -6,6 +6,6 @@ tail -$LINES $0
 echo -e "\033[0m<<<\n\n"
 
 ###START HERE###
-kite-dataset csv-schema ml-latest-small/ratings.csv --record-name ratings -o ratings.avsc
+kite-dataset csv-schema ratings.csv --record-name ratings -o ratings.avsc
 cat ratings.avsc
 
