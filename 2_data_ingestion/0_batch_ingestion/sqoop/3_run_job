@@ -1,0 +1,27 @@
+LINES=`wc -l $0|cut -d ' ' -f 1`
+SKIP=`grep -n '###START HERE###' $0|tail -1|cut -d ':' -f 1`
+LINES=$(($LINES-$SKIP))
+echo -e "\n\033[0;32m1# CREATING A SQOOP INCREMENTAL DATA IMPORT JOB:\033[0m \n>>>\033[1;33m"
+tail -$LINES $0
+echo -e "\033[0m<<<\n\n"
+
+###START HERE###
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0/
+
+CKPT_FILE=checkpoint.meetup
+if [ -f $CKPT_FILE ];
+then
+   START=$(cat $CKPT_FILE)
+else
+   START=0
+fi
+STOP_T=$(date -d 'today 00:00:00' "+%s")
+STOP=$(($STOP_T-1))
+
+sqoop job --exec meetup_$(whoami) -- --where " mtime between ${START}000 and ${STOP}000" --target-dir /user/$(whoami)/meetup_data_sqoop/$(date -d @$STOP_T +'%Y_%m_%d') 
+
+if [ $? -eq 0 ]; then
+    echo $STOP_T>$CKPT_FILE
+fi
+
+hdfs dfs -ls -h -R /user/$(whoami)/meetup_data_sqoop/
