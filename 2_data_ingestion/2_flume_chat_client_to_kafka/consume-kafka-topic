@@ -5,4 +5,4 @@
 # granted to it by virtue of its status as Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-kafka-console-consumer --zookeeper haperf104:2181,haperf105:2181 --topic flume-chat
+kafka-console-consumer --zookeeper haperf103:2181,haperf111:2181 --topic flume-chat
